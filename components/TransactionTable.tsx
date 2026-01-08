@@ -53,9 +53,12 @@ const TransactionRow: React.FC<{
         if (e.key === 'Enter') {
             handleSave();
         } else if (e.key === 'Escape') {
-            setIsEditing(false);
-            setIsAddingNew(false);
-            setCategory(transaction.category);
+            if (isAddingNew) {
+                setIsAddingNew(false);
+            } else {
+                setIsEditing(false);
+                setCategory(transaction.category);
+            }
         }
     };
 
@@ -86,35 +89,42 @@ const TransactionRow: React.FC<{
             <td className={`p-3 text-sm font-mono font-bold text-right whitespace-nowrap ${amountColor}`}>
                 {transaction.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
             </td>
-            <td className="p-3 text-sm min-w-[150px]">
+            <td className="p-3 text-sm min-w-[180px]">
                 {isEditing ? (
                     <div className="flex flex-col gap-1">
                         {!isAddingNew ? (
                              <select
                                 value={category}
                                 onChange={handleCategoryChange}
-                                className="bg-white border border-slate-200 rounded px-2 py-1 text-sm w-full text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-sm"
+                                className="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm w-full text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-sm"
                             >
                                 {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
-                                <option value="ADD_NEW" className="font-bold text-teal-600">+ Create New...</option>
+                                <option value="ADD_NEW" className="font-bold text-teal-600 tracking-tight">+ Create New...</option>
                             </select>
                         ) : (
-                            <div className="relative">
+                            <div className="flex items-center gap-1 group">
                                 <input
                                     ref={inputRef}
                                     type="text"
                                     value={newCategory}
                                     onChange={(e) => setNewCategory(e.target.value)}
                                     onKeyDown={handleKeyDown}
-                                    placeholder="Enter category name..."
-                                    className="bg-white border border-teal-300 rounded px-2 py-1 text-sm w-full text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-sm"
+                                    placeholder="Category Name"
+                                    className="bg-white border border-teal-300 rounded-lg px-2 py-1.5 text-sm flex-1 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-sm"
                                  />
                                  <button 
-                                    onClick={() => setIsAddingNew(false)}
-                                    className="absolute right-2 top-1.5 text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase"
-                                    title="Go back to list"
+                                    onClick={handleSave}
+                                    className="p-1.5 bg-teal-500 text-white rounded-lg hover:bg-teal-600 shadow-sm active:scale-90 transition-all"
+                                    title="Add Category"
                                  >
-                                    Back
+                                    <CheckIcon className="h-4 w-4" />
+                                 </button>
+                                 <button 
+                                    onClick={() => setIsAddingNew(false)}
+                                    className="text-[10px] font-black text-slate-400 hover:text-slate-600 uppercase px-1"
+                                    title="Cancel"
+                                 >
+                                    Esc
                                  </button>
                             </div>
                         )}
@@ -228,56 +238,58 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                 </div>
             )}
 
-            <table className="w-full table-auto">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                        <th className="p-4 text-center w-12">
-                            <input 
-                                type="checkbox" 
-                                checked={transactions.length > 0 && selectedIds.size === transactions.length}
-                                onChange={handleToggleSelectAll}
-                                className="w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+            <div className="overflow-x-auto">
+                <table className="w-full table-auto">
+                    <thead className="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th className="p-4 text-center w-12">
+                                <input 
+                                    type="checkbox" 
+                                    checked={transactions.length > 0 && selectedIds.size === transactions.length}
+                                    onChange={handleToggleSelectAll}
+                                    className="w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                                />
+                            </th>
+                            <th className="p-4 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Date</th>
+                            <th className="p-4 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Description</th>
+                            <th className="p-4 text-right text-xs font-bold text-slate-500 uppercase tracking-widest">Amount</th>
+                            <th className="p-4 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Category</th>
+                            <th className="p-4 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Notes</th>
+                            <th className="p-4 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                        {transactions.map(t => (
+                            <TransactionRow
+                                key={t.id}
+                                transaction={t}
+                                isSelected={selectedIds.has(t.id)}
+                                onToggleSelect={handleToggleSelect}
+                                onDelete={onDelete}
+                                onUpdate={onUpdate}
+                                allCategories={allCategories}
                             />
-                        </th>
-                        <th className="p-4 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Date</th>
-                        <th className="p-4 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Description</th>
-                        <th className="p-4 text-right text-xs font-bold text-slate-500 uppercase tracking-widest">Amount</th>
-                        <th className="p-4 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Category</th>
-                        <th className="p-4 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Notes</th>
-                        <th className="p-4 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Actions</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                    {transactions.map(t => (
-                        <TransactionRow
-                            key={t.id}
-                            transaction={t}
-                            isSelected={selectedIds.has(t.id)}
-                            onToggleSelect={handleToggleSelect}
-                            onDelete={onDelete}
-                            onUpdate={onUpdate}
-                            allCategories={allCategories}
-                        />
-                    ))}
-                </tbody>
-                <tfoot className="bg-slate-50 border-t-2 border-slate-200">
-                    <tr>
-                        <td colSpan={3} className="p-4 text-right text-xs font-bold text-slate-500 uppercase tracking-widest">
-                            Table Totals ({totals.count} Records):
-                        </td>
-                        <td className="p-4 text-right">
-                           <div className="flex flex-col items-end gap-1">
-                                <div className="text-[10px] font-bold text-emerald-600 uppercase">In: {formatCurrency(totals.income)}</div>
-                                <div className="text-[10px] font-bold text-rose-600 uppercase">Out: {formatCurrency(totals.spending)}</div>
-                                <div className={`text-sm font-black border-t border-slate-300 pt-1 ${totals.net >= 0 ? 'text-teal-600' : 'text-amber-600'}`}>
-                                    {formatCurrency(totals.net)}
-                                </div>
-                           </div>
-                        </td>
-                        <td colSpan={3} className="bg-slate-50"></td>
-                    </tr>
-                </tfoot>
-            </table>
+                        ))}
+                    </tbody>
+                    <tfoot className="bg-slate-50 border-t-2 border-slate-200 font-medium text-slate-900">
+                        <tr>
+                            <td colSpan={3} className="p-4 text-right text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                Workspace Totals:
+                            </td>
+                            <td className="p-4 text-right">
+                            <div className="flex flex-col items-end gap-1">
+                                    <div className="text-[10px] font-bold text-emerald-600 uppercase">In: {formatCurrency(totals.income)}</div>
+                                    <div className="text-[10px] font-bold text-rose-600 uppercase">Out: {formatCurrency(totals.spending)}</div>
+                                    <div className={`text-sm font-black border-t border-slate-300 pt-1 ${totals.net >= 0 ? 'text-teal-600' : 'text-amber-600'}`}>
+                                        {formatCurrency(totals.net)}
+                                    </div>
+                            </div>
+                            </td>
+                            <td colSpan={3} className="bg-slate-50"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
         </div>
     );
 };

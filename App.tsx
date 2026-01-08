@@ -12,6 +12,7 @@ import { CopyIcon, FileTextIcon, LoaderIcon, ServerCrashIcon, DownloadIcon, Tras
 const App: React.FC = () => {
     const [currentUser, setCurrentUser] = useState<string | null>(localStorage.getItem('fintracks_session'));
     const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [customCategories, setCustomCategories] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -23,24 +24,27 @@ const App: React.FC = () => {
         if (currentUser) {
             const users = JSON.parse(localStorage.getItem('fintracks_users') || '{}');
             const userData = users[currentUser];
-            if (userData && userData.transactions) {
-                setTransactions(userData.transactions);
+            if (userData) {
+                setTransactions(userData.transactions || []);
+                setCustomCategories(userData.customCategories || []);
             }
         } else {
             setTransactions([]);
+            setCustomCategories([]);
         }
     }, [currentUser]);
 
-    // Save data whenever transactions change
+    // Save data whenever transactions or customCategories change
     useEffect(() => {
         if (currentUser) {
             const users = JSON.parse(localStorage.getItem('fintracks_users') || '{}');
             if (users[currentUser]) {
                 users[currentUser].transactions = transactions;
+                users[currentUser].customCategories = customCategories;
                 localStorage.setItem('fintracks_users', JSON.stringify(users));
             }
         }
-    }, [transactions, currentUser]);
+    }, [transactions, customCategories, currentUser]);
 
     const handleLogin = (username: string) => {
         setCurrentUser(username);
@@ -51,6 +55,7 @@ const App: React.FC = () => {
         setCurrentUser(null);
         localStorage.removeItem('fintracks_session');
         setTransactions([]);
+        setCustomCategories([]);
     };
 
     const handleFileUpload = async (files: File[]) => {
@@ -95,7 +100,15 @@ const App: React.FC = () => {
 
     const handleUpdateTransaction = useCallback((updatedTransaction: Transaction) => {
         setTransactions(prev => prev.map(t => t.id === updatedTransaction.id ? updatedTransaction : t));
-    }, []);
+        
+        // If the updated transaction has a category not in our lists, add it to customCategories
+        const defaultCategories = ["Rent", "Insurance", "Subscription", "Groceries", "Dining", "Utilities", "Transport", "Shopping", "Income", "Other"];
+        if (updatedTransaction.category && 
+            !defaultCategories.includes(updatedTransaction.category) && 
+            !customCategories.includes(updatedTransaction.category)) {
+            setCustomCategories(prev => [...prev, updatedTransaction.category]);
+        }
+    }, [customCategories]);
 
     const handleBulkDelete = useCallback(() => {
         if (confirm(`Are you sure you want to delete ${selectedIds.size} transactions?`)) {
@@ -108,14 +121,23 @@ const App: React.FC = () => {
         setTransactions(prev => prev.map(t => 
             selectedIds.has(t.id) ? { ...t, category: newCategory } : t
         ));
+        
+        const defaultCategories = ["Rent", "Insurance", "Subscription", "Groceries", "Dining", "Utilities", "Transport", "Shopping", "Income", "Other"];
+        if (newCategory && 
+            !defaultCategories.includes(newCategory) && 
+            !customCategories.includes(newCategory)) {
+            setCustomCategories(prev => [...prev, newCategory]);
+        }
+        
         setSelectedIds(new Set());
-    }, [selectedIds]);
+    }, [selectedIds, customCategories]);
     
     const allCategories = useMemo(() => {
         const defaultCategories = ["Rent", "Insurance", "Subscription", "Groceries", "Dining", "Utilities", "Transport", "Shopping", "Income", "Other"];
+        // Combine defaults, explicit custom categories from user profile, and any categories found in current transactions
         const transactionCategories = transactions.map(t => t.category);
-        return Array.from(new Set([...defaultCategories, ...transactionCategories]));
-    }, [transactions]);
+        return Array.from(new Set([...defaultCategories, ...customCategories, ...transactionCategories])).filter(Boolean);
+    }, [transactions, customCategories]);
 
     const generateDataString = (delimiter: string = ',') => {
         const header = ["Date", "Description", "Amount", "Category", "Notes"].join(delimiter) + "\n";
