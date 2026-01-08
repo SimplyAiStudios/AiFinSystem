@@ -1,0 +1,5 @@
+{
+  "name": "FINTRACKS AI",
+  "description": "Powered by SIMPLY Ai TECHNOLOGY, FINTRACKS AI is an AI-powered tool to extract transaction data from bank and credit card statements (images or PDFs) and convert it into a structured CSV format. Users can upload statements, and the application uses AI to automatically parse all transactions, categorize them, and format the data for easy import into spreadsheet software like Google Sheets. Features include transaction deletion and custom category management.",
+  "requestFramePermissions": []
+}
